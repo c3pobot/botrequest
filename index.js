@@ -26,10 +26,12 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
     throw(e)
   }
 }
-module.exports = async(body = {})=>{
+module.exports = async(cmd, opts = {})=>{
   try{
-    let opts = {method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}
-    let res = await requestWithRetry(BOT_BRIDGE_URI+'/cmd', opts)
+    if(!cmd) return
+    let payload = {method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"}}
+    payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd } })
+    let res = await requestWithRetry(path.join(BOT_BRIDGE_URI, 'cmd'), payload)
     if(res?.body) return res.body
     console.error(res)
   }catch(e){
