@@ -33,8 +33,8 @@ module.exports = async(cmd, opts = {})=>{
     payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd } })
     let res = await requestWithRetry(path.join(BOT_BRIDGE_URI, 'cmd'), payload)
     if(res?.body) return res.body
-    console.error(res)
+    throw(res)
   }catch(e){
-    console.error(e);
+    throw(e);
   }
 }
