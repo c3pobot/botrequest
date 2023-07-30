@@ -60,7 +60,6 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
 enumShards()
 module.exports = async(cmd, opts = {})=>{
   try{
-    console
     if(!cmd || !BOT_TOTAL_SHARDS) return
     let podName = opts.podName
     if(!podName) podName = await getPodName(opts)
