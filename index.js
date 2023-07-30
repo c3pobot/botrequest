@@ -1,9 +1,34 @@
 'use strict'
 const fetch = require('node-fetch')
 const path = require('path')
-const BOT_BRIDGE_URI = process.env.BOT_BRIDGE_URI
+const getNumShards = require('./getNumShards')
+const BOT_NODE_NAME_PREFIX = process.env.BOT_NODE_NAME_PREFIX || 'bot'
+const BOT_SVC = process.env.BOT_SVC || 'bot:3000'
 const parseResponse = require('./parseResponse')
-
+let BOT_TOTAL_SHARDS, enumShardNum = {}
+const enumShards = ()=>{
+  try{
+    let tempObj = await getNumShards()
+    if(!tempObj?.totalShards) throw('Error getting number of shards...')
+    BOT_TOTAL_SHARDS = +tempObj.totalShards
+    let i = BOT_TOTAL_SHARDS
+    while(i--) enumShardNum[BOT_NODE_NAME_PREFIX+'-'+i] = { id: +i, podName: BOT_NODE_NAME_PREFIX+'-'+i, url: 'http://'+BOT_NODE_NAME_PREFIX+'-'+i+'.'+BOT_SVC+'/cmd' }
+    if(Object.values(enumShardNum).length === 0) setTimeout(enumShards, 5000)
+    console.log(JSON.stringify(enumShardNum))
+  }catch(e){
+    console.error(e)
+    setTimeout(enumShards, 5000)
+  }
+}
+const getPodName = async(obj = {})=>{
+  try{
+    if(!obj.sId) return
+    let id = (Number(BigInt(obj.sId) >> 22n) % (+BOT_TOTAL_SHARDS))
+    if(id >= 0) return BOT_NODE_NAME_PREFIX+'-'+id
+  }catch(e){
+    throw(e);
+  }
+}
 const fetchRequest = async(uri, opts = {})=>{
   try{
     let res = await fetch(uri, opts)
@@ -31,12 +56,17 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
     throw(e)
   }
 }
+enumShards()
 module.exports = async(cmd, opts = {})=>{
   try{
-    if(!cmd) return
+    if(!cmd || BOT_TOTAL_SHARDS) return
+    let podName = opts.podName
+    if(!podName) podName = await getPodName(opts)
+    console.log('found '+podName+' for '+opts.sId)
+    if(!podName || !enumShardNum[podName]) return
     let payload = {method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"}}
-    payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd } })
-    let res = await requestWithRetry(path.join(BOT_BRIDGE_URI, 'cmd'), payload)
+    payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName } })
+    let res = await requestWithRetry(enumShardNum[obj.podName].url, payload)
     if(res?.body) return res.body
     throw(res)
   }catch(e){
