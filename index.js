@@ -17,9 +17,14 @@ const fetchRequest = async(uri, opts = {})=>{
 const requestWithRetry = async(uri, opts = {}, count = 0)=>{
   try{
     let res = await fetchRequest(uri, opts)
-    if(res?.error === 'FetchError' && 10 >= count){
-      count++
-      return await requestWithRetry(uri, opts, count)
+    if(res?.error === 'FetchError'){
+      if(count < 10){
+        count++
+        return await requestWithRetry(uri, opts, count)
+      }else{
+        console.log('Tried 10 times with error ...')
+        console.log(res)
+      }
     }
     return res
   }catch(e){
