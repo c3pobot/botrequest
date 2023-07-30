@@ -1,7 +1,7 @@
 'use strict'
 const path = require('path')
 const fetch = require('node-fetch')
-const parseResponse = require('parseResponse')
+const parseResponse = require('./parseResponse')
 const BOT_BRIDGE_URI = process.env.BOT_BRIDGE_URI
 
 module.exports = async()=>{

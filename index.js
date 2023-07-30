@@ -6,7 +6,7 @@ const BOT_NODE_NAME_PREFIX = process.env.BOT_NODE_NAME_PREFIX || 'bot'
 const BOT_SVC = process.env.BOT_SVC || 'bot:3000'
 const parseResponse = require('./parseResponse')
 let BOT_TOTAL_SHARDS, enumShardNum = {}
-const enumShards = ()=>{
+const enumShards = async()=>{
   try{
     let tempObj = await getNumShards()
     if(!tempObj?.totalShards) throw('Error getting number of shards...')
@@ -59,14 +59,14 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
 enumShards()
 module.exports = async(cmd, opts = {})=>{
   try{
-    if(!cmd || BOT_TOTAL_SHARDS) return
+    console
+    if(!cmd || !BOT_TOTAL_SHARDS) return
     let podName = opts.podName
     if(!podName) podName = await getPodName(opts)
-    console.log('found '+podName+' for '+opts.sId)
     if(!podName || !enumShardNum[podName]) return
     let payload = {method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"}}
     payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName } })
-    let res = await requestWithRetry(enumShardNum[obj.podName].url, payload)
+    let res = await requestWithRetry(enumShardNum[podName].url, payload)
     if(res?.body) return res.body
     throw(res)
   }catch(e){
