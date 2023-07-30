@@ -34,7 +34,8 @@ const fetchRequest = async(uri, opts = {})=>{
     let res = await fetch(uri, opts)
     return await parseResponse(res)
   }catch(e){
-    if(e?.error) return {error: e.name, message: e.message, type: e.type}
+    console.log(e?.error)
+    if(e?.error) return {error: e.error, message: e.message, type: e.type}
     if(e?.status) return await parseResponse(e)
     throw(e)
   }
