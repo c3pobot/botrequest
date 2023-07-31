@@ -33,6 +33,24 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
     throw(e)
   }
 }
+const allBotRequest = async(opts = {})=>{
+  try{
+    let array = [], res = []
+    const singleBotRequest = async(shardId, opt = {})=>{
+      try{
+        let obj = await requestWithRetry(`http://${BOT_NODE_NAME_PREFIX}-${shardId}.${BOT_SVC}/cmd`, {...opt,...{ podName: `${BOT_NODE_NAME_PREFIX}-${shardId}` }})
+        if(obj?.body) res.push(obj.body)
+      }catch(e){
+        throw(e);
+      }
+    }
+    while(BOT_TOTAL_SHARDS--) array.push(singleBotRequest(i, opts))
+    await Promise.all(array)
+    return res
+  }catch(e){
+    throw(e)
+  }
+}
 const monitorNumShards = async()=>{
   try{
     let opts = { timeout: 5000, compress: true, method: 'GET' }
@@ -58,6 +76,7 @@ module.exports = async(cmd, opts = {})=>{
     if(!podName) throw('Error getting podName...')
     let payload = { method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"} }
     payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName } })
+    if(podName === 'all') return await allBotRequest(payload)
     let res = await requestWithRetry(`http://${podName}.${BOT_SVC}/cmd`, payload)
     if(res?.body) return res.body
     throw(res)
