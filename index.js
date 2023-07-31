@@ -35,7 +35,7 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
 }
 const allBotRequest = async(opts = {})=>{
   try{
-    let array = [], res = []
+    let array = [], res = [], i = BOT_TOTAL_SHARDS
     const singleBotRequest = async(shardId, opt = {})=>{
       try{
         let obj = await requestWithRetry(`http://${BOT_NODE_NAME_PREFIX}-${shardId}.${BOT_SVC}/cmd`, {...opt,...{ podName: `${BOT_NODE_NAME_PREFIX}-${shardId}` }})
@@ -44,7 +44,7 @@ const allBotRequest = async(opts = {})=>{
         throw(e);
       }
     }
-    while(BOT_TOTAL_SHARDS--) array.push(singleBotRequest(i, opts))
+    while(i--) array.push(singleBotRequest(i, opts))
     await Promise.all(array)
     return res
   }catch(e){
