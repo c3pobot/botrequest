@@ -1,55 +1,29 @@
 'use strict'
-const fetch = require('node-fetch')
-const path = require('path')
+const fetch = require('./fetch')
 const getNumShards = require('./getNumShards')
 const BOT_NODE_NAME_PREFIX = process.env.BOT_NODE_NAME_PREFIX || 'bot'
 const BOT_SVC = process.env.BOT_SVC || 'bot:3000'
-const parseResponse = require('./parseResponse')
-let BOT_TOTAL_SHARDS, enumShardNum = {}
-const enumShards = async()=>{
-  try{
-    let tempObj = await getNumShards()
-    if(!tempObj?.totalShards) throw('Error getting number of shards...')
-    BOT_TOTAL_SHARDS = +tempObj.totalShards
-    let i = BOT_TOTAL_SHARDS
-    while(i--) enumShardNum[BOT_NODE_NAME_PREFIX+'-'+i] = { id: +i, podName: BOT_NODE_NAME_PREFIX+'-'+i, url: 'http://'+BOT_NODE_NAME_PREFIX+'-'+i+'.'+BOT_SVC+'/cmd' }
-    if(Object.values(enumShardNum).length === 0) setTimeout(enumShards, 5000)
-    console.log(JSON.stringify(enumShardNum))
-  }catch(e){
-    console.error(e)
-    setTimeout(enumShards, 5000)
-  }
-}
+
+let BOT_TOTAL_SHARDS, notify = true, retryCount = 10
 const getPodName = async(obj = {})=>{
   try{
+    if(BOT_TOTAL_SHARDS === 1) return `${BOT_NODE_NAME_PREFIX}-0`
     if(!obj.sId) return
     let id = (Number(BigInt(obj.sId) >> 22n) % (+BOT_TOTAL_SHARDS))
-    if(id >= 0) return BOT_NODE_NAME_PREFIX+'-'+id
+    if(id >= 0) return `${BOT_NODE_NAME_PREFIX}-${id}`
   }catch(e){
     throw(e);
   }
 }
-const fetchRequest = async(uri, opts = {})=>{
-  try{
-    let res = await fetch(uri, opts)
-    return await parseResponse(res)
-  }catch(e){
-    console.log(e?.error)
-    if(e?.error) return {error: e.error, message: e.message, type: e.type}
-    if(e?.status) return await parseResponse(e)
-    throw(e)
-  }
-}
 const requestWithRetry = async(uri, opts = {}, count = 0)=>{
   try{
-    let res = await fetchRequest(uri, opts)
+    let res = await fetch(uri, opts)
     if(res?.error === 'FetchError'){
-      if(count < 10){
+      if(count < retryCount){
         count++
         return await requestWithRetry(uri, opts, count)
       }else{
-        console.log('Tried 10 times with error ...')
-        console.log(res)
+        throw(`tried request ${count} time and errored with ${res.error} : ${res.message}`)
       }
     }
     return res
@@ -57,16 +31,31 @@ const requestWithRetry = async(uri, opts = {}, count = 0)=>{
     throw(e)
   }
 }
-enumShards()
+const monitorNumShards = async()=>{
+  try{
+    let opts = { timeout: 5000, compress: true, method: 'GET' }
+    let res = await requestWithRetry(`http://${BOT_SVC}/getNumShards`, opts)
+    if(res?.body?.totalShards && +res.body.totalShards > 0){
+      if(notify) console.log('Setting number of shards to '+res.body.totalShards+'...')
+      BOT_TOTAL_SHARDS = +res.body.totalShards
+      notify = false
+    }
+    setTimeout(monitorNumShards, 5000)
+  }catch(e){
+    setTimeout(monitorNumShards, 5000)
+    throw(e)
+  }
+}
+monitorNumShards()
 module.exports = async(cmd, opts = {})=>{
   try{
     if(!cmd || !BOT_TOTAL_SHARDS) return
     let podName = opts.podName
     if(!podName) podName = await getPodName(opts)
-    if(!podName || !enumShardNum[podName]) return
+    if(!podName) throw('Error getting podName...')
     let payload = {method: 'POST', timeout: 60000, compress: true, headers: {"Content-Type": "application/json"}}
     payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName } })
-    let res = await requestWithRetry(enumShardNum[podName].url, payload)
+    let res = await requestWithRetry(`http://${podName}.${BOT_SVC}/cmd`, payload)
     if(res?.body) return res.body
     throw(res)
   }catch(e){
