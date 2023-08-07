@@ -70,7 +70,7 @@ const monitorNumShards = async()=>{
     throw(e)
   }
 }
-//monitorNumShards()
+monitorNumShards()
 module.exports = async(cmd, opts = {})=>{
   try{
     if(!cmd || !BOT_TOTAL_SHARDS) return
@@ -82,7 +82,7 @@ module.exports = async(cmd, opts = {})=>{
     payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName, numShards: BOT_TOTAL_SHARDS } })
     let res = await requestWithRetry(`http://${podName}.${BOT_SVC}/cmd`, payload)
     if(res?.body?.totalShards){
-      lolog.info(`Change in number of ${BOT_NODE_NAME_PREFIX} shards from ${BOT_TOTAL_SHARDS} to ${res.body.totalShards}`)
+      log.info(`Change in number of ${BOT_NODE_NAME_PREFIX} shards from ${BOT_TOTAL_SHARDS} to ${res.body.totalShards}`)
       BOT_TOTAL_SHARDS = +res?.body?.totalShards
       payload.body = JSON.stringify({ ...opts, ...{ cmd: cmd, podName: podName, numShards: BOT_TOTAL_SHARDS } })
       res = await requestWithRetry(`http://${podName}.${BOT_SVC}/cmd`, payload)
