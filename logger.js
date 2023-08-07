@@ -1,8 +1,6 @@
 /*
 Logger class for easy and aesthetically pleasing console logging
 */
-const LOG_SERVER_URI = process.env.LOG_SERVER_URI
-const remote = require('./remote')
 const chalk = require('chalk');
 const Level = {};
 Level.ERROR = 'error';
@@ -59,19 +57,15 @@ function log(type, message) {
     let content = getContent(message)
     switch (type) {
       case Level.ERROR: {
-        if(LOG_SERVER_URI) remote(type, timestamp, content)
         return console.error(`${getTimeStamp(timestamp)} ${chalk.bgRed(type.toUpperCase())} ${content}`);
       }
       case Level.WARN: {
-        if(LOG_SERVER_URI) remote(type, timestamp, content)
         return console.warn(`${getTimeStamp(timestamp)} ${chalk.black.bgYellow(type.toUpperCase())} ${content}`);
       }
       case Level.INFO: {
-        if(LOG_SERVER_URI) remote(type, timestamp, content)
         return console.log(`${getTimeStamp(timestamp)} ${chalk.bgBlue(type.toUpperCase())} ${content}`);
       }
       case Level.DEBUG: {
-        if(LOG_SERVER_URI) remote(type, timestamp, content)
         return console.log(`${getTimeStamp(timestamp)} ${chalk.green(type.toUpperCase())} ${content}`);
       }
       default: throw new TypeError('Logger type must be either error, warn, info/log, or debug.');
